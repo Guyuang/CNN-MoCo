@@ -1,14 +1,14 @@
 # Experiment
 dataset_name                 = 'SPARE_demo'     # Name of utilized dataset
 experiment_name              = 'pre_trained'    # Experiment name under specific dataset
-model_name                   = 'UNet_3D'
+model_name                   = 'DnCNN_3D'
 
 
 # Run instructions
-train_model                  = False             # Train the model
-valid_model                  = False             # Do validation during training
+train_model                  = True              # Train the model
+valid_model                  = True             # Do validation during training
 test_model                   = False             # Test the model
-pred_model                   = True              # Predict using the model
+pred_model                   = False              # Predict using the model
 manual_seed                  = 0                 # Manual random seed for code [|None]
 
 
@@ -79,8 +79,11 @@ optimizer                    = 'adam'                    # Optimizer ['sgd' | 'a
 learning_rate_base           = 1e-3                     # Base learning rate
 n_epochs                     = 100                      # Number of epochs during training
 final_weights_file           = 'final_weights.hdf5'     # File name for the final weights of model
-train_aug                    = False                    # Using data augment  
+train_aug                    = False                    # Using data augment
 
+# For Diffusion
+beta_start                   =0.0001
+beta_end                     =0.02
 
 # Batch sizes
 phase_as_batch               = False            # Use phase number as batch size

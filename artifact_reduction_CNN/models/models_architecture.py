@@ -5,6 +5,7 @@ from tensorflow.keras.losses import mean_squared_error, mean_absolute_error
 from utils.optimizer import Optimizer
 from utils.metrics import structural_similarity, peak_snr
 from utils.basic_blocks import *
+import tensorflow as tf
 
 
 def mixed_loss(L1_weight, L2_weight):
@@ -303,7 +304,7 @@ class CDDN_3D:
         self.cf = cf
         self.filters = cf.filter_num
         self.kernel_size = cf.kernel_size
-        self.block_num = cf.DDB_block   # Number of dilated dense blocks
+        self.block_num = cf.RDB_count   # Number of dilated dense blocks
 
     def make(self):
         model_input = Input(shape=self.cf.model_shape, name='CDDN_3D/Input')
@@ -343,3 +344,56 @@ class CDDN_3D:
         self.model.summary()
         print([var.name for var in self.model.trainable_variables])
         return self.model
+
+class Diffusion:
+    def __init__(self, cf):
+        self.model = None
+        self.cf = cf
+        self.beta_start = cf.beta_start
+        self.beta_end = cf.beta_end
+
+
+    def make(self):
+        model_input = Input(shape=self.cf.model_shape, name='Diffusion/Input')
+        # # Input layer
+        # x = conv3d(model_input, self.filters, self.kernel_size, name='Layer0', mode='FR')
+        #
+        # conv_mode = 'F'
+        # if self.cf.norm:
+        #     conv_mode += 'B'
+        # conv_mode += 'R'
+        #
+        # # Hidden layers
+        # for i in range(self.net_depth - 2):
+        #     x = conv3d(x, self.filters, self.kernel_size, name='Layer_%d' % (i + 1), mode=conv_mode)
+        #
+        # # Output layer
+        # x = conv3d(x, self.cf.channel_size, self.kernel_size, name='Layer_last', mode='F')
+        # model_output = Subtract(name='DnCNN_3D/Output')([model_input, x])
+        #
+        # self.model = Model(inputs=model_input,
+        #                    outputs=model_output,
+        #                    name='DnCNN_3D')
+
+        # Compile
+        optimizer = Optimizer().make(self.cf.optimizer, self.cf.learning_rate_base)
+        compile_weights = [1]
+
+        if self.cf.loss == 'L2':
+            compile_losses = ['MSE']
+        elif self.cf.loss == 'L1':
+            compile_losses = ['MAE']
+
+        compile_metrics = [structural_similarity, peak_snr]
+        self.model.compile(optimizer=optimizer,
+                           loss=compile_losses,
+                           loss_weights=compile_weights,
+                           metrics=compile_metrics)
+
+        print('\n > Build CDDN_3D model successfully...')
+        self.model.summary()
+        print([var.name for var in self.model.trainable_variables])
+        return self.model
+
+    def linear_beta_schedule(self,timesteps=1000):
+        return tf.linspace(self.beta_start, self.beta_end, timesteps)

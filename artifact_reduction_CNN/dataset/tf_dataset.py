@@ -118,7 +118,7 @@ def tfDataset(data_path, input_shape, phase_num, patch_size, patch_overlap, data
             images_ds = images_ds.batch(batch_size)
 
             if shuffle:
-                buf_size = int(all_buf_size // batch_size // 2)
+                buf_size = max(int(all_buf_size // batch_size // 2), 1)  # 确保 buf_size 至少为 1
                 images_ds = images_ds.shuffle(buffer_size=buf_size, reshuffle_each_iteration=True)
 
         else:
@@ -127,7 +127,7 @@ def tfDataset(data_path, input_shape, phase_num, patch_size, patch_overlap, data
                                                                  patching(y, patch_size, patch_overlap, False))))
 
             if shuffle:
-                buf_size = int(all_buf_size // 2)
+                buf_size = max(int(all_buf_size // batch_size // 2), 1)  # 确保 buf_size 至少为 1
                 images_ds = images_ds.shuffle(buffer_size=buf_size, reshuffle_each_iteration=True)
 
             images_ds = images_ds.batch(batch_size)

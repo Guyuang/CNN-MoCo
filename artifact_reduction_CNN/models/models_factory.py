@@ -16,6 +16,8 @@ class Models_Factory:
             model = DnCNN_3D(cf).make()
         elif cf.model_name == 'CDDN_3D':
             model = CDDN_3D(cf).make()
+        elif cf.model_name == 'Diffusion':
+            model = Diffusion(cf).make()
         else:
             raise ValueError('Unknown model name')
 
