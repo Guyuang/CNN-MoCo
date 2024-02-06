@@ -84,6 +84,7 @@ train_aug                    = False                    # Using data augment
 # For Diffusion
 beta_start                   =0.0001
 beta_end                     =0.02
+time_steps                    =200
 
 # Batch sizes
 phase_as_batch               = False            # Use phase number as batch size

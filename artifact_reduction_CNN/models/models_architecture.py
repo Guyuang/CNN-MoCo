@@ -351,6 +351,7 @@ class Diffusion:
         self.cf = cf
         self.beta_start = cf.beta_start
         self.beta_end = cf.beta_end
+        self.time_steps = cf.time_steps
 
 
     def make(self):
@@ -395,5 +396,3 @@ class Diffusion:
         print([var.name for var in self.model.trainable_variables])
         return self.model
 
-    def linear_beta_schedule(self,timesteps=1000):
-        return tf.linspace(self.beta_start, self.beta_end, timesteps)
