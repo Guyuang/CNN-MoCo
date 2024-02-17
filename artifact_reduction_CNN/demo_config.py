@@ -21,12 +21,12 @@ data_suffix                  = '.npy'
 
 
 # Data info
-data_size                    = (96, 224, 224)         # Size of npy file
+data_size                    = (450, 220, 450)         # Size of npy file
 channel_size                 = 1
 
 
 # Patch
-patch_size                   = (96, 64, 64)       # All cover all slices
+patch_size                   = (150, 88, 150)       # All cover all slices
 patch_overlap                = 6
 
 
@@ -84,11 +84,11 @@ train_aug                    = False                    # Using data augment
 # For Diffusion
 beta_start                   =0.0001
 beta_end                     =0.02
-time_steps                    =200
+time_steps                    =100
 
 # Batch sizes
 phase_as_batch               = False            # Use phase number as batch size
-batch_size_train             = 5              # Batch size during training
+batch_size_train             = 1              # Batch size during training
 batch_size_valid             = 1              # Batch size during validation
 batch_size_test              = 1              # Batch size during testing
 batch_size_pred              = 1               # Batch size during prediction

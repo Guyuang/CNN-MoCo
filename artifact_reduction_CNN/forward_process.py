@@ -4,9 +4,10 @@ from utils.metrics import structural_similarity, peak_snr
 from configuration.configuration import Configuration
 import tensorflow as tf
 import numpy as np
+from dataset.dataset_generator import Dataset_Generator
 import matplotlib.pyplot as plt
+import SimpleITK as sitk
 from PIL import Image
-import requests
 
 
 class Forward:
@@ -60,44 +61,91 @@ class Forward:
 
         return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
 
-    def get_noisy_image(self,x_start, t):
-        # add noise
-        x_noisy = self.q_sample(x_start, t=t)
+    def get_noisy_image(self, x_start, t):
+        original_shape = tf.shape(x_start)
+        if len(x_start.shape) == 3:
+            x_start = np.array(x_start)
+            x_start = tf.convert_to_tensor(x_start, dtype=tf.float32) / 255.0
+            # add noise
+            x_noisy = self.q_sample(x_start, t=t)
+            # turn back into PIL image
+            noisy_image = self.reverse_transform(tf.squeeze(x_noisy))
+            return noisy_image.numpy().astype(np.float32)  # Ensure numpy array with correct type
 
-        # turn back into PIL image
-        noisy_image = self.reverse_transform(tf.squeeze(x_noisy))
+        elif len(x_start.shape) == 5:
+            # 确保x_start是一个Tensor,转换为三维
+            x_start = tf.convert_to_tensor(x_start, dtype=tf.float32)
+            x_start_3d = tf.reshape(x_start,(original_shape[1], original_shape[2], original_shape[3]))
 
-        return noisy_image
+            # 计算最大值和最小值
+            min_val = tf.reduce_min(x_start_3d)
+            max_val = tf.reduce_max(x_start_3d)
 
+            # 将强度值转换为-1到1之间
+            x_start_3d = 2 * (x_start_3d - min_val) / (max_val - min_val) - 1
+
+            # 添加噪声
+            x_noisy_merged = self.q_sample(x_start_3d, t=t)
+            x_noisy_merged = self.reverse_transform(tf.squeeze(x_noisy_merged))
+
+            # 将噪声数据的形状恢复到五维
+            noisy_image = tf.reshape(x_noisy_merged, original_shape)
+
+            # 确保数据类型为float32，并转换为Tensor
+            noisy_image = tf.convert_to_tensor(noisy_image)
+            return noisy_image
 
 
 # Load configuration files
-dataset_path = 'E:/Documents/GitHub/CNN-MoCo/artifact_reduction_CNN/experiments/'
-experiments_path = 'E:/Documents/GitHub/CNN-MoCo/artifact_reduction_CNN/data/'
+dataset_path = 'E:/Documents/GitHub/CNN-MoCo/artifact_reduction_CNN/data/'
+experiments_path = 'E:/Documents/GitHub/CNN-MoCo/artifact_reduction_CNN/experiments/'
 config_file = 'E:/Documents/GitHub/CNN-MoCo/artifact_reduction_CNN/demo_config.py'
 configuration = Configuration(config_file, dataset_path, experiments_path)
 cf = configuration.load()
-
-
 forward_process = Forward(cf)
 
-image_path = r'E:\Desktop\output_cats_verify.png'
-image = Image.open(image_path)
+train_dataset, val_dataset, test_dataset, pred_dataset = Dataset_Generator().make(cf)
+
+for data in train_dataset.take(1):
+    inputs, targets = data  # 假设数据集中的每个元素都是一个元组(input, target)
+    inputs_itk = sitk.GetImageFromArray(inputs)
+    # sitk.Show(inputs_itk, "Image Display")
+    print(f"Image size: {inputs_itk.GetSize()}")
+    print(f"Image spacing: {inputs_itk.GetSpacing()}")
+    print(f"Image depth: {inputs_itk.GetDepth()}")
+    print(f"Number of components per pixel: {inputs_itk.GetNumberOfComponentsPerPixel()}")
+
+    noisy_image = forward_process.get_noisy_image(inputs, tf.constant([30]))  # 打印数据
+    noisy_image = sitk.GetImageFromArray(noisy_image)
+    print(f"Image size: {noisy_image.GetSize()}")
+    print(f"Image spacing: {noisy_image.GetSpacing()}")
+    print(f"Image depth: {noisy_image.GetDepth()}")
+    print(f"Number of components per pixel: {noisy_image.GetNumberOfComponentsPerPixel()}")
+    sitk.Show(noisy_image[0, :, :, :, 0], "Image Display")
 
 
-# 将图像转换为适合处理的格式
-image = np.array(image)
-image = tf.convert_to_tensor(image, dtype=tf.float32) / 255.0  # 确保图像数据在[0, 1]范围
-# 假设你的 get_noisy_image 方法已经返回一个适合显示的张量
-noisy_image_tensor = forward_process.get_noisy_image(image, tf.constant([100]))
 
-# 由于 noisy_image_tensor 可能不再是 uint8 类型，我们需要将其转换回 [0, 1] 范围的浮点数以便显示
-noisy_image_tensor = tf.cast(noisy_image_tensor, dtype=tf.float32)  # 确保为 float 类型
-noisy_image_tensor = (noisy_image_tensor - tf.reduce_min(noisy_image_tensor)) / (tf.reduce_max(noisy_image_tensor) - tf.reduce_min(noisy_image_tensor))
 
-# 使用 matplotlib 显示加噪声后的图像
-plt.imshow(noisy_image_tensor.numpy())
-plt.show()
+# image_path = r'E:\Downloads\MonteCarloDatasets\MonteCarloDatasets\Training\P1\MC_T_P1_NS\FDKRecon\FDK4D_01.mha'
+# image = sitk.ReadImage(image_path)
+#
+# print(f"Image size: {image.GetSize()}")
+# print(f"Image spacing: {image.GetSpacing()}")
+# print(f"Image depth: {image.GetDepth()}")
+# print(f"Number of components per pixel: {image.GetNumberOfComponentsPerPixel()}")
+# sitk.Show(image, "Image Display")
+#
+# x_start = np.array(image)
+# print(x_start.shape)
+#
+# noisy_image = forward_process.get_noisy_image(x_start, tf.constant([2]))
+# noisy_image = sitk.GetImageFromArray(noisy_image)
+# print(f"Image size: {noisy_image.GetSize()}")
+# print(f"Image spacing: {noisy_image.GetSpacing()}")
+# print(f"Image depth: {noisy_image.GetDepth()}")
+# print(f"Number of components per pixel: {noisy_image.GetNumberOfComponentsPerPixel()}")
+#
+# sitk.Show(noisy_image, "Image Display")
 
 
 
